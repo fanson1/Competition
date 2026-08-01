@@ -1,0 +1,78 @@
+CREATE TABLE UserEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    passwordHash TEXT NOT NULL,
+    nickname TEXT NOT NULL,
+    avatarEmoji TEXT NOT NULL DEFAULT '😀',
+    createdAt INTEGER NOT NULL DEFAULT 0,
+    lastLoginAt INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE ProfileEntity (
+    userId TEXT NOT NULL PRIMARY KEY,
+    totalScore INTEGER NOT NULL DEFAULT 0,
+    maxLevel INTEGER NOT NULL DEFAULT 0,
+    totalCorrectCount INTEGER NOT NULL DEFAULT 0,
+    totalGamesPlayed INTEGER NOT NULL DEFAULT 0,
+    maxStreak INTEGER NOT NULL DEFAULT 0,
+    levelScores TEXT NOT NULL DEFAULT '',
+    levelCorrectCounts TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (userId) REFERENCES UserEntity(id)
+);
+
+-- Cross-reference table for profile completed levels (Set<Int>)
+CREATE TABLE ProfileCompletedLevelEntity (
+    userId TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    PRIMARY KEY (userId, level),
+    FOREIGN KEY (userId) REFERENCES UserEntity(id)
+);
+
+-- Leaderboard: per-level best scores
+CREATE TABLE LeaderboardEntity (
+    userId TEXT NOT NULL,
+    username TEXT NOT NULL,
+    nickname TEXT NOT NULL,
+    avatarEmoji TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    correctCount INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL,
+    PRIMARY KEY (userId, level)
+);
+
+-- Challenge records
+CREATE TABLE ChallengeEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    challengerId TEXT NOT NULL,
+    challengerName TEXT NOT NULL,
+    targetId TEXT NOT NULL,
+    targetName TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    challengerScore INTEGER NOT NULL,
+    targetScore INTEGER NOT NULL,
+    isWin INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL
+);
+
+-- Game progress for each user
+CREATE TABLE GameProgressEntity (
+    userId TEXT NOT NULL PRIMARY KEY,
+    score INTEGER NOT NULL DEFAULT 0,
+    maxUnlockedLevel INTEGER NOT NULL DEFAULT 1,
+    totalCorrectCount INTEGER NOT NULL DEFAULT 0,
+    maxStreak INTEGER NOT NULL DEFAULT 0
+);
+
+-- Cross-reference for game progress completed levels
+CREATE TABLE GameProgressCompletedLevelEntity (
+    userId TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    PRIMARY KEY (userId, level)
+);
+
+-- Last login tracking (for auto-login)
+CREATE TABLE AppMetaEntity (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);

@@ -1,0 +1,103 @@
+-- User queries
+getUserById:
+SELECT * FROM UserEntity WHERE id = ?;
+
+getUserByUsername:
+SELECT * FROM UserEntity WHERE username = ?;
+
+getAllUsers:
+SELECT * FROM UserEntity;
+
+insertUser:
+INSERT OR REPLACE INTO UserEntity(id, username, passwordHash, nickname, avatarEmoji, createdAt, lastLoginAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateUserLastLogin:
+UPDATE UserEntity SET lastLoginAt = ? WHERE id = ?;
+
+deleteUser:
+DELETE FROM UserEntity WHERE id = ?;
+
+-- Profile queries
+getProfile:
+SELECT * FROM ProfileEntity WHERE userId = ?;
+
+getAllProfiles:
+SELECT * FROM ProfileEntity;
+
+insertOrReplaceProfile:
+INSERT OR REPLACE INTO ProfileEntity(userId, totalScore, maxLevel, totalCorrectCount, totalGamesPlayed, maxStreak, levelScores, levelCorrectCounts)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+updateProfileScore:
+UPDATE ProfileEntity SET totalScore = ?, levelScores = ? WHERE userId = ?;
+
+getProfileCompletedLevels:
+SELECT level FROM ProfileCompletedLevelEntity WHERE userId = ?;
+
+insertProfileCompletedLevel:
+INSERT OR IGNORE INTO ProfileCompletedLevelEntity(userId, level) VALUES (?, ?);
+
+deleteProfileCompletedLevels:
+DELETE FROM ProfileCompletedLevelEntity WHERE userId = ?;
+
+-- Leaderboard queries
+getLeaderboardAll:
+SELECT * FROM LeaderboardEntity ORDER BY score DESC;
+
+getLeaderboardByLevel:
+SELECT * FROM LeaderboardEntity WHERE level = ? ORDER BY score DESC;
+
+getLeaderboardEntry:
+SELECT * FROM LeaderboardEntity WHERE userId = ? AND level = ?;
+
+getUserLeaderboardEntries:
+SELECT * FROM LeaderboardEntity WHERE userId = ?;
+
+insertOrReplaceLeaderboard:
+INSERT OR REPLACE INTO LeaderboardEntity(userId, username, nickname, avatarEmoji, score, level, correctCount, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteAllLeaderboard:
+DELETE FROM LeaderboardEntity;
+
+-- Challenge queries
+getAllChallenges:
+SELECT * FROM ChallengeEntity;
+
+getChallengesByUser:
+SELECT * FROM ChallengeEntity WHERE challengerId = ? OR targetId = ? ORDER BY timestamp DESC;
+
+getChallengesByChallenger:
+SELECT * FROM ChallengeEntity WHERE challengerId = ? ORDER BY timestamp DESC;
+
+insertChallenge:
+INSERT OR REPLACE INTO ChallengeEntity(id, challengerId, challengerName, targetId, targetName, level, challengerScore, targetScore, isWin, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Game progress queries
+getGameProgress:
+SELECT * FROM GameProgressEntity WHERE userId = ?;
+
+getAllGameProgress:
+SELECT * FROM GameProgressEntity;
+
+insertOrReplaceGameProgress:
+INSERT OR REPLACE INTO GameProgressEntity(userId, score, maxUnlockedLevel, totalCorrectCount, maxStreak)
+VALUES (?, ?, ?, ?, ?);
+
+getGameProgressCompletedLevels:
+SELECT level FROM GameProgressCompletedLevelEntity WHERE userId = ?;
+
+insertGameProgressCompletedLevel:
+INSERT OR IGNORE INTO GameProgressCompletedLevelEntity(userId, level) VALUES (?, ?);
+
+deleteGameProgressCompletedLevels:
+DELETE FROM GameProgressCompletedLevelEntity WHERE userId = ?;
+
+-- App meta queries
+getMeta:
+SELECT value FROM AppMetaEntity WHERE key = ?;
+
+setMeta:
+INSERT OR REPLACE INTO AppMetaEntity(key, value) VALUES (?, ?);

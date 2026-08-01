@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_loading">加载中...</string>
+
+    <!-- Home -->
+    <string name="home_title">一站到底</string>
+    <string name="home_logo_description">一站到底 Logo</string>
+    <string name="home_start_button">▶ 开始挑战</string>
+    <string name="home_select_level">选择关卡</string>
+    <string name="home_leaderboard">排行榜</string>
+    <string name="home_challenge">单关挑战</string>
+    <string name="home_hero">英雄榜</string>
+    <string name="home_level_display">第%1$d关</string>
+    <string name="home_score_display">⭐ %1$d</string>
+
+    <!-- Level config titles -->
+    <string name="level_1_title">初出茅庐</string>
+    <string name="level_1_subtitle">知识之旅的起点</string>
+    <string name="level_2_title">小试牛刀</string>
+    <string name="level_2_subtitle">渐入佳境</string>
+    <string name="level_3_title">锋芒毕露</string>
+    <string name="level_3_subtitle">锋芒初现</string>
+    <string name="level_4_title">技惊四座</string>
+    <string name="level_4_subtitle">惊艳全场</string>
+    <string name="level_5_title">炉火纯青</string>
+    <string name="level_5_subtitle">技艺精湛</string>
+    <string name="level_6_title">出神入化</string>
+    <string name="level_6_subtitle">登峰造极</string>
+    <string name="level_7_title">登峰造极</string>
+    <string name="level_7_subtitle">独步天下</string>
+    <string name="level_8_title">独步天下</string>
+    <string name="level_8_subtitle">天下无双</string>
+    <string name="level_9_title">天下无双</string>
+    <string name="level_9_subtitle">一代宗师</string>
+    <string name="level_10_title">一代宗师</string>
+    <string name="level_10_subtitle">问鼎巅峰</string>
+
+    <!-- Difficulty labels -->
+    <string name="difficulty_easy">初级</string>
+    <string name="difficulty_medium">中级</string>
+    <string name="difficulty_hard">高级</string>
+
+    <!-- Category labels -->
+    <string name="category_science">科学</string>
+    <string name="category_history">历史</string>
+    <string name="category_geography">地理</string>
+    <string name="category_culture">文化</string>
+    <string name="category_general">综合</string>
+
+    <!-- Player titles -->
+    <string name="player_title_rampant">势如破竹</string>
+    <string name="player_title_excellent">表现出色</string>
+    <string name="player_title_notable">可圈可点</string>
+    <string name="player_title_showing_potential">初露锋芒</string>
+    <string name="player_title_courageous">勇气可嘉</string>
+    <string name="player_title_grandmaster">一代宗师</string>
+
+    <!-- Game / Quiz -->
+    <string name="game_score_label">得分</string>
+    <string name="game_streak_label">连击</string>
+    <string name="game_question_progress">%1$d/%2$d</string>
+    <string name="game_level_header">第%1$d关 · %2$s</string>
+    <string name="game_correct_answer">✓ 回答正确！</string>
+    <string name="game_wrong_answer">✗ 回答错误</string>
+    <string name="game_timeout">⏰ 时间到！</string>
+    <string name="game_option_a">A</string>
+    <string name="game_option_b">B</string>
+    <string name="game_option_c">C</string>
+    <string name="game_option_d">D</string>
+
+    <!-- Result -->
+    <string name="result_challenge_win">挑战成功！</string>
+    <string name="result_challenge_lose">挑战失败</string>
+    <string name="result_level_info">第%1$d关 · %2$s</string>
+    <string name="result_challenge_target">挑战对象: %1$s</string>
+    <string name="result_total_score">总分</string>
+    <string name="result_correct">答对</string>
+    <string name="result_wrong">答错</string>
+    <string name="result_streak">最高连击</string>
+    <string name="result_accuracy">正确率 %1$d%%</string>
+    <string name="result_completion">完成 %1$d/10</string>
+    <string name="result_retry">重新挑战本关</string>
+    <string name="result_home">返回首页</string>
+    <string name="result_my_score">我的得分</string>
+    <string name="result_vs">VS</string>
+    <string name="result_target_score">%1$s的得分</string>
+
+    <!-- Level complete -->
+    <string name="level_complete_title">第%1$d关通过！</string>
+    <string name="level_complete_challenge_win">挑战成功！</string>
+    <string name="level_complete_challenge_lose">挑战失败</string>
+    <string name="level_complete_challenge_target">挑战对象: %1$s</string>
+    <string name="level_complete_correct">答对</string>
+    <string name="level_complete_wrong">答错</string>
+    <string name="level_complete_accuracy">正确率</string>
+    <string name="level_complete_score">得分</string>
+    <string name="level_complete_streak">最高连击</string>
+    <string name="level_complete_next_level">下一关：%1$s</string>
+    <string name="level_complete_all_done">通关完成！</string>
+    <string name="level_complete_retry">↻ 重玩本关</string>
+    <string name="level_complete_home">首页</string>
+    <string name="level_complete_my_score">我的得分</string>
+    <string name="level_complete_vs">VS</string>
+    <string name="level_complete_target_score">%1$s的得分</string>
+    <string name="level_complete_accuracy_value">%1$d%%</string>
+    <string name="level_complete_star_filled">★</string>
+    <string name="level_complete_star_empty">☆</string>
+
+    <!-- Login -->
+    <string name="login_title">一站到底</string>
+    <string name="login_subtitle">知识竞答挑战</string>
+    <string name="login_tab">登录</string>
+    <string name="register_tab">注册</string>
+    <string name="login_username">用户名</string>
+    <string name="login_password">密码</string>
+    <string name="login_confirm_password">确认密码</string>
+    <string name="login_nickname">昵称</string>
+    <string name="login_password_mismatch">两次密码不一致</string>
+    <string name="login_error">操作失败</string>
+    <string name="login_button">登录</string>
+    <string name="register_button">注册</string>
+
+    <!-- Profile -->
+    <string name="profile_back">← 返回</string>
+    <string name="profile_title">个人中心</string>
+    <string name="profile_username">@%1$s</string>
+    <string name="profile_total_score">总分</string>
+    <string name="profile_max_level">最高关卡</string>
+    <string name="profile_games_played">游戏次数</string>
+    <string name="profile_correct_count">答对数</string>
+    <string name="profile_streak">最高连击</string>
+    <string name="profile_completed_levels">已通关</string>
+    <string name="profile_completed_section">已通关卡</string>
+    <string name="profile_level_badge">第%1$d关</string>
+    <string name="profile_edit_button">编辑资料</string>
+    <string name="profile_change_password">修改密码</string>
+    <string name="profile_logout">退出登录</string>
+    <string name="profile_edit_title">编辑资料</string>
+    <string name="profile_nickname">昵称</string>
+    <string name="profile_save">保存</string>
+    <string name="profile_cancel">取消</string>
+    <string name="profile_password_changed">密码已修改</string>
+    <string name="profile_password_changed_desc">为保障账号安全，请重新登录</string>
+    <string name="profile_confirm">确定</string>
+    <string name="profile_change_password_title">修改密码</string>
+    <string name="profile_old_password">原密码</string>
+    <string name="profile_new_password">新密码</string>
+    <string name="profile_confirm_new_password">确认新密码</string>
+    <string name="profile_password_mismatch">两次密码不一致</string>
+    <string name="profile_change_failed">修改失败</string>
+    <string name="profile_confirm_button">确认</string>
+    <string name="profile_select_avatar">选择头像</string>
+
+    <!-- Welcome / ModeSelect -->
+    <string name="welcome_title">一站到底</string>
+    <string name="welcome_subtitle">知识竞答挑战</string>
+    <string name="welcome_select_mode">请选择使用模式</string>
+    <string name="welcome_online_desc">连接服务器，支持在线对战和数据同步</string>
+    <string name="welcome_offline_desc">本地离线使用，无需网络连接</string>
+    <string name="welcome_confirm">开始使用</string>
+
+    <!-- Mode -->
+    <string name="mode_online">在线模式</string>
+    <string name="mode_offline">离线模式</string>
+    <string name="mode_current">当前模式: %1$s</string>
+    <string name="mode_switch_to_online">切换到在线模式</string>
+    <string name="mode_switch_to_offline">切换到离线模式</string>
+    <string name="mode_syncing">正在同步数据...</string>
+    <string name="mode_sync_success">同步完成</string>
+    <string name="mode_sync_failed">同步失败: %1$s</string>
+    <string name="mode_need_login">请先登录后再切换到在线模式</string>
+    <string name="mode_server_url">服务器地址</string>
+    <string name="mode_server_hint">例如: http://localhost:8080</string>
+
+    <!-- Leaderboard -->
+    <string name="leaderboard_back">← 返回</string>
+    <string name="leaderboard_title">排行榜</string>
+    <string name="leaderboard_tab_total">总排行</string>
+    <string name="leaderboard_tab_level">第%1$d关</string>
+    <string name="leaderboard_empty">暂无记录</string>
+    <string name="leaderboard_total_description">共答对%1$d题 · 最高第%2$d关</string>
+    <string name="leaderboard_level_description">第%1$d关 · 答对%2$d题</string>
+
+    <!-- Challenge -->
+    <string name="challenge_back">← 返回</string>
+    <string name="challenge_title">单关挑战</string>
+    <string name="challenge_my_score">我的成绩</string>
+    <string name="challenge_score_format">%1$d分</string>
+    <string name="challenge_not_played">还未挑战过本关</string>
+    <string name="challenge_section_header">排行榜 · 第%1$d关</string>
+    <string name="challenge_empty">暂无挑战记录</string>
+    <string name="challenge_score_detail">答对%1$d题</string>
+    <string name="challenge_challenge_button">挑战TA</string>
+
+    <!-- Challenge Hero -->
+    <string name="challenge_hero_back">← 返回</string>
+    <string name="challenge_hero_title">挑战英雄榜</string>
+    <string name="challenge_hero_total">总挑战</string>
+    <string name="challenge_hero_wins">胜利</string>
+    <string name="challenge_hero_losses">失败</string>
+    <string name="challenge_hero_win_rate">胜率</string>
+    <string name="challenge_hero_score">挑战得分</string>
+    <string name="challenge_hero_records">挑战记录</string>
+    <string name="challenge_hero_empty">暂无挑战记录</string>
+    <string name="challenge_hero_challenged">挑战 %1$s</string>
+    <string name="challenge_hero_challenged_by">被 %1$s 挑战</string>
+    <string name="challenge_hero_level">第%1$d关</string>
+    <string name="challenge_hero_just_now">刚刚</string>
+    <string name="challenge_hero_minutes_ago">%1$d分钟前</string>
+    <string name="challenge_hero_hours_ago">%1$d小时前</string>
+    <string name="challenge_hero_days_ago">%1$d天前</string>
+    <string name="challenge_hero_tab_challenger">我挑战的</string>
+    <string name="challenge_hero_tab_target">被挑战</string>
+    <string name="challenge_hero_empty_target">暂无被挑战记录</string>
+</resources>
