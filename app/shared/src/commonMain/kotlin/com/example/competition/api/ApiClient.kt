@@ -34,7 +34,7 @@ object ApiClient {
     private val db get() = DatabaseManager.db
 
     fun init() {
-        loadSavedUrl()?.let { baseUrl = it }
+        baseUrl = PlatformUtils.defaultBaseUrl()
     }
 
     fun getBaseUrl(): String = baseUrl

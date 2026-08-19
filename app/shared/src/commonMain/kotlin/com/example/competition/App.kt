@@ -1,154 +1,70 @@
 package com.example.competition
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.competition.api.ApiClient
-import com.example.competition.data.GamePreferences
-import com.example.competition.data.UserManager
 import com.example.competition.model.GameStatus
-import com.example.competition.model.LeaderboardEntry
-import com.example.competition.repository.ModeRouter
-import com.example.competition.repository.bridge.RepositoryBridge
+import com.example.competition.presentation.app.AppEffect
+import com.example.competition.presentation.app.AppIntent
+import com.example.competition.presentation.app.AppViewModel
+import com.example.competition.presentation.app.Screen
+import com.example.competition.presentation.game.GameEffect
+import com.example.competition.presentation.game.GameIntent
+import com.example.competition.presentation.game.GameViewModel
+import com.example.competition.ui.MviEffectCollector
+import com.example.competition.ui.components.QuizProgressBar
+import com.example.competition.ui.components.ScreenBackground
+import com.example.competition.ui.components.rememberPulseScale
+import com.example.competition.ui.rememberViewModel
 import com.example.competition.ui.screens.*
+import com.example.competition.ui.theme.QuizPalette
 import com.example.competition.ui.theme.QuizTheme
-import com.example.competition.ui.theme.Gold
-import com.example.competition.viewmodel.GameViewModel
-import com.example.competition.api.dto.ProfileDto
-import com.example.competition.api.dto.UserDto
-import competition.app.shared.generated.resources.Res
-import competition.app.shared.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-
-private suspend fun doOnlineLogin(authResp: com.example.competition.api.dto.AuthResponse, viewModel: GameViewModel) {
-    ApiClient.setToken(authResp.token)
-    val dto = authResp.user
-    val user = com.example.competition.model.User(
-        id = dto.id, username = dto.username,
-        passwordHash = "", nickname = dto.nickname,
-        avatarEmoji = dto.avatarEmoji,
-        createdAt = dto.createdAt, lastLoginAt = dto.lastLoginAt
-    )
-    RepositoryBridge.getRemoteUser().loadFromRemote(dto)
-    UserManager.setCurrentUser(user)
-
-    // Sync profile from server
-    ApiClient.getMe().onSuccess { me ->
-        val profile = me.profile
-        if (profile != null) {
-            val userProfile = com.example.competition.model.UserProfile(
-                user = user,
-                totalScore = profile.totalScore,
-                maxLevel = profile.maxLevel,
-                totalCorrectCount = profile.totalCorrectCount,
-                totalGamesPlayed = profile.totalGamesPlayed,
-                maxStreak = profile.maxStreak,
-                levelScores = parseLevelMap(profile.levelScores),
-                levelCorrectCounts = parseLevelMap(profile.levelCorrectCounts),
-                completedLevels = profile.completedLevels.toSet()
-            )
-            RepositoryBridge.getRemoteUser().loadProfile(userProfile)
-            UserManager.setCurrentProfile(userProfile)
-            GamePreferences.saveProgressFromProfile(userProfile)
-        }
-    }
-
-    // Sync leaderboard from server
-    viewModel.syncLeaderboardFromServer()
-}
-
-private fun parseLevelMap(serialized: String): Map<Int, Int> {
-    if (serialized.isBlank()) return emptyMap()
-    return serialized.split(",").mapNotNull { entry ->
-        val parts = entry.split(":")
-        if (parts.size == 2) parts[0].toIntOrNull() to parts[1].toIntOrNull()
-        else null
-    }.filter { it.second != null }.map { it.first!! to it.second!! }.toMap()
-}
-
-enum class Screen {
-    MODE_SELECT, LOGIN, HOME, PROFILE, LEADERBOARD, CHALLENGE, CHALLENGE_HERO
-}
+import competition.app.shared.generated.resources.Res
+import competition.app.shared.generated.resources.app_logo
+import competition.app.shared.generated.resources.*
 
 @Composable
 fun App() {
     QuizTheme {
-        val viewModel = remember { GameViewModel() }
-        val uiState by viewModel.uiState.collectAsState()
-        val isLoading by viewModel.isLoading.collectAsState()
-
-        var currentScreen by remember { mutableStateOf(Screen.MODE_SELECT) }
-        var challengeLevel by remember { mutableStateOf(1) }
-        var challengeTarget by remember { mutableStateOf<LeaderboardEntry?>(null) }
-
-        val currentUser = remember { mutableStateOf(UserManager.getCurrentUser()) }
-        val isLoggedIn = remember { mutableStateOf(UserManager.isLoggedIn()) }
+        val appViewModel = rememberViewModel { AppViewModel() }
+        val gameViewModel = rememberViewModel { GameViewModel() }
+        val appState by appViewModel.state.collectAsState()
+        val gameState by gameViewModel.state.collectAsState()
 
         LaunchedEffect(Unit) {
-            try {
-                UserManager.init()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            ApiClient.init()
-            ModeRouter.init()
+            appViewModel.dispatch(AppIntent.Init)
+            gameViewModel.dispatch(GameIntent.LoadQuestions)
+        }
 
-            // Skip mode selection if already chosen on a previous launch
-            if (ModeRouter.isModeSelected() && currentScreen == Screen.MODE_SELECT) {
-                currentScreen = Screen.LOGIN
+        MviEffectCollector(appViewModel) { effect ->
+            when (effect) {
+                AppEffect.ReloadGameProgress -> gameViewModel.dispatch(GameIntent.ReloadProgress)
+                AppEffect.SyncLeaderboard -> gameViewModel.dispatch(GameIntent.SyncLeaderboardFromServer)
             }
+        }
 
-            try {
-                viewModel.loadQuestions()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            // Auto-login with stored token if in online mode
-            if (ModeRouter.isOnline() && ApiClient.isAuthenticated()) {
-                ApiClient.verifyToken().onSuccess { verify ->
-                    if (verify.valid && verify.user != null) {
-                        val remoteUser = RepositoryBridge.getRemoteUser()
-                        remoteUser.loadFromRemote(verify.user)
-                        currentUser.value = remoteUser.getCurrentUser()
-                        isLoggedIn.value = true
-                        GamePreferences.setUserId(currentUser.value?.id)
-                        // Load server profile into local game progress
-                        ApiClient.getMe().onSuccess { me ->
-                            val profile = me.profile
-                            if (profile != null) {
-                                val userProfile = com.example.competition.model.UserProfile(
-                                    user = currentUser.value!!,
-                                    totalScore = profile.totalScore,
-                                    maxLevel = profile.maxLevel,
-                                    totalCorrectCount = profile.totalCorrectCount,
-                                    totalGamesPlayed = profile.totalGamesPlayed,
-                                    maxStreak = profile.maxStreak,
-                                    levelScores = parseLevelMap(profile.levelScores),
-                                    levelCorrectCounts = parseLevelMap(profile.levelCorrectCounts),
-                                    completedLevels = profile.completedLevels.toSet()
-                                )
-                                remoteUser.loadProfile(userProfile)
-                                UserManager.setCurrentProfile(userProfile)
-                                GamePreferences.saveProgressFromProfile(userProfile)
-                            }
-                        }
-                        viewModel.reloadProgress()
-                        currentScreen = Screen.HOME
-                    }
-                }
-            }
-
-            if (isLoggedIn.value) {
-                GamePreferences.setUserId(currentUser.value?.id)
-                viewModel.reloadProgress()
-                currentScreen = Screen.HOME
+        MviEffectCollector(gameViewModel) { effect ->
+            when (effect) {
+                GameEffect.GameOver -> Unit
+                GameEffect.LevelComplete -> Unit
             }
         }
 
@@ -156,164 +72,194 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Gold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(Res.string.app_loading),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                }
+            if (gameState.isLoading) {
+                AppLoadingScreen()
             } else {
-                when (currentScreen) {
-                    Screen.MODE_SELECT -> {
-                        ModeSelectionScreen(
-                            onComplete = {
-                                currentScreen = Screen.LOGIN
+                AnimatedContent(
+                    targetState = appState.currentScreen,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(300), initialAlpha = 0f) togetherWith
+                            fadeOut(animationSpec = tween(200), targetAlpha = 0f)
+                    },
+                    label = "screen"
+                ) { screen ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (screen) {
+                            Screen.MODE_SELECT -> {
+                                ModeSelectionScreen(
+                                    onComplete = {
+                                        appViewModel.dispatch(AppIntent.ModeSelectionComplete)
+                                    }
+                                )
                             }
-                        )
-                    }
 
-                    Screen.LOGIN -> {
-                        LoginScreen(
-                            onLogin = { username, password ->
-                                if (ModeRouter.isOnline()) {
-                                    ApiClient.login(username, password).map { authResp ->
-                                        doOnlineLogin(authResp, viewModel)
-                                    }.map { }
-                                } else {
-                                    UserManager.login(username, password).map { }
+                            Screen.LOGIN -> {
+                                LoginScreen(
+                                    onLoginSuccess = {
+                                        appViewModel.dispatch(AppIntent.LoginSuccess)
+                                    }
+                                )
+                            }
+
+                            Screen.HOME -> {
+                                HomeScreen(
+                                    gameState = gameState.game,
+                                    user = appState.user,
+                                    profile = com.example.competition.data.UserManager.getCurrentProfile(),
+                                    onStartGame = { gameViewModel.dispatch(GameIntent.StartGame) },
+                                    onStartLevel = { level -> gameViewModel.dispatch(GameIntent.StartLevel(level)) },
+                                    onNavigateToProfile = { appViewModel.dispatch(AppIntent.Navigate(Screen.PROFILE)) },
+                                    onNavigateToLeaderboard = { appViewModel.dispatch(AppIntent.Navigate(Screen.LEADERBOARD)) },
+                                    onNavigateToChallenge = { appViewModel.dispatch(AppIntent.Navigate(Screen.CHALLENGE)) },
+                                    onNavigateToChallengeHero = { appViewModel.dispatch(AppIntent.Navigate(Screen.CHALLENGE_HERO)) }
+                                )
+                            }
+
+                            Screen.PROFILE -> {
+                                appState.user?.let { user ->
+                                    ProfileScreen(
+                                        user = user,
+                                        profile = com.example.competition.data.UserManager.getCurrentProfile(),
+                                        onProfileUpdated = {
+                                            appViewModel.dispatch(AppIntent.RefreshUser)
+                                        },
+                                        onLogout = {
+                                            appViewModel.dispatch(AppIntent.Logout)
+                                        },
+                                        onBack = {
+                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                        }
+                                    )
                                 }
-                            },
-                            onRegister = { username, password, nickname ->
-                                if (ModeRouter.isOnline()) {
-                                    ApiClient.register(username, password, nickname).map { authResp ->
-                                        doOnlineLogin(authResp, viewModel)
-                                    }.map { }
-                                } else {
-                                    UserManager.register(username, password, nickname).map { }
+                            }
+
+                            Screen.LEADERBOARD -> {
+                                LeaderboardScreen(
+                                    onBack = {
+                                        appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                    }
+                                )
+                            }
+
+                            Screen.CHALLENGE -> {
+                                appState.user?.let { user ->
+                                    ChallengeScreen(
+                                        user = user,
+                                        onBack = {
+                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                        },
+                                        onStartChallenge = { level, target ->
+                                            gameViewModel.dispatch(GameIntent.StartChallenge(level, target))
+                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                        }
+                                    )
                                 }
-                            },
-                            onLoginSuccess = {
-                                currentUser.value = UserManager.getCurrentUser()
-                                isLoggedIn.value = true
-                                GamePreferences.setUserId(currentUser.value?.id)
-                                viewModel.reloadProgress()
-                                currentScreen = Screen.HOME
                             }
-                        )
-                    }
 
-                    Screen.HOME -> {
-                        HomeScreen(
-                            gameState = uiState,
-                            user = currentUser.value,
-                            profile = UserManager.getCurrentProfile(),
-                            onStartGame = { viewModel.startGame() },
-                            onStartLevel = { level -> viewModel.startLevel(level) },
-                            onNavigateToProfile = { currentScreen = Screen.PROFILE },
-                            onNavigateToLeaderboard = { currentScreen = Screen.LEADERBOARD },
-                            onNavigateToChallenge = { currentScreen = Screen.CHALLENGE },
-                            onNavigateToChallengeHero = { currentScreen = Screen.CHALLENGE_HERO }
-                        )
-                    }
-
-                    Screen.PROFILE -> {
-                        ProfileScreen(
-                            user = currentUser.value!!,
-                            profile = UserManager.getCurrentProfile(),
-                            onProfileUpdated = {
-                                currentUser.value = UserManager.getCurrentUser()
-                            },
-                            onLogout = {
-                                UserManager.logout()
-                                GamePreferences.setUserId(null)
-                                viewModel.resetGame()
-                                isLoggedIn.value = false
-                                currentUser.value = null
-                                currentScreen = Screen.LOGIN
-                            },
-                            onBack = { currentScreen = Screen.HOME }
-                        )
-                    }
-
-                    Screen.LEADERBOARD -> {
-                        LeaderboardScreen(
-                            onBack = { currentScreen = Screen.HOME }
-                        )
-                    }
-
-                    Screen.CHALLENGE -> {
-                        ChallengeScreen(
-                            user = currentUser.value!!,
-                            onBack = { currentScreen = Screen.HOME },
-                            onStartChallenge = { level, target ->
-                                challengeLevel = level
-                                challengeTarget = target
-                                viewModel.startChallenge(level, target)
-                                currentScreen = Screen.HOME
+                            Screen.CHALLENGE_HERO -> {
+                                appState.user?.let { user ->
+                                    ChallengeHeroScreen(
+                                        user = user,
+                                        onBack = {
+                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                        }
+                                    )
+                                }
                             }
-                        )
-                    }
-
-                    Screen.CHALLENGE_HERO -> {
-                        ChallengeHeroScreen(
-                            user = currentUser.value!!,
-                            onBack = { currentScreen = Screen.HOME }
-                        )
+                        }
                     }
                 }
 
                 // Game screens overlay
-                when (uiState.status) {
+                val game = gameState.game
+                when (game.status) {
                     GameStatus.PLAYING,
                     GameStatus.CORRECT_ANSWER,
                     GameStatus.WRONG_ANSWER,
                     GameStatus.TIMEOUT -> {
                         QuizScreen(
-                            gameState = uiState,
-                            onAnswerSelected = { index -> viewModel.selectAnswer(index) }
+                            gameState = game,
+                            onAnswerSelected = { index -> gameViewModel.dispatch(GameIntent.SelectAnswer(index)) }
                         )
                     }
 
                     GameStatus.LEVEL_COMPLETE -> {
-                        val target by viewModel.challengeTarget.collectAsState()
                         LevelCompleteScreen(
-                            gameState = uiState,
-                            onNextLevel = { viewModel.startNextLevel() },
-                            onRetryLevel = { viewModel.retryCurrentLevel() },
+                            gameState = game,
+                            onNextLevel = { gameViewModel.dispatch(GameIntent.StartNextLevel) },
+                            onRetryLevel = { gameViewModel.dispatch(GameIntent.RetryCurrentLevel) },
                             onBackToHome = {
-                                viewModel.clearChallengeTarget()
-                                viewModel.resetGame()
-                                currentScreen = Screen.HOME
+                                gameViewModel.dispatch(GameIntent.ClearChallengeTarget)
+                                gameViewModel.dispatch(GameIntent.ResetGame)
+                                appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
                             },
-                            challengeTarget = target
+                            challengeTarget = gameState.challengeTarget
                         )
                     }
 
                     GameStatus.GAME_OVER -> {
-                        val target by viewModel.challengeTarget.collectAsState()
                         ResultScreen(
-                            gameState = uiState,
-                            onRetryLevel = { viewModel.retryCurrentLevel() },
+                            gameState = game,
+                            onRetryLevel = { gameViewModel.dispatch(GameIntent.RetryCurrentLevel) },
                             onBackToHome = {
-                                viewModel.clearChallengeTarget()
-                                viewModel.resetGame()
-                                currentScreen = Screen.HOME
+                                gameViewModel.dispatch(GameIntent.ClearChallengeTarget)
+                                gameViewModel.dispatch(GameIntent.ResetGame)
+                                appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
                             },
-                            challengeTarget = target
+                            challengeTarget = gameState.challengeTarget
                         )
                     }
+
                     else -> {}
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppLoadingScreen() {
+    val pulseScale = rememberPulseScale()
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "loadProgress"
+    )
+
+    ScreenBackground(contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(Res.drawable.app_logo),
+                contentDescription = stringResource(Res.string.home_logo_description),
+                modifier = Modifier
+                    .size(110.dp)
+                    .scale(pulseScale),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                text = stringResource(Res.string.home_title),
+                fontSize = 26.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                color = QuizPalette.Gold
+            )
+            Spacer(modifier = Modifier.height(30.dp))
+            QuizProgressBar(
+                fraction = progress,
+                modifier = Modifier.fillMaxWidth(0.55f),
+                height = 6.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(Res.string.app_loading),
+                fontSize = 14.sp,
+                color = QuizPalette.TextMuted
+            )
         }
     }
 }

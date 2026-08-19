@@ -7,6 +7,7 @@ import com.example.competition.api.dto.SyncUploadRequest
 import com.example.competition.api.dto.UserDto
 import com.example.competition.data.UserManager
 import com.example.competition.repository.bridge.RepositoryBridge
+import com.example.competition.util.LevelMapCodec
 
 object SyncManager {
     suspend fun syncToOnline(): Result<Unit> = runCatching {
@@ -31,8 +32,8 @@ object SyncManager {
                 totalCorrectCount = profile.totalCorrectCount,
                 totalGamesPlayed = profile.totalGamesPlayed,
                 maxStreak = profile.maxStreak,
-                levelScores = profile.levelScores.entries.joinToString(",") { "${it.key}:${it.value}" },
-                levelCorrectCounts = profile.levelCorrectCounts.entries.joinToString(",") { "${it.key}:${it.value}" },
+                levelScores = LevelMapCodec.encode(profile.levelScores),
+                levelCorrectCounts = LevelMapCodec.encode(profile.levelCorrectCounts),
                 completedLevels = profile.completedLevels.toList()
             )
         }

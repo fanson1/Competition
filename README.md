@@ -28,19 +28,36 @@
 
 ```
 .
-├── core/                         # 跨端共享的领域模型与数据层
+├── core/                         # 跨端共享的领域模型与基础设施（纯 KMP，无 Compose 依赖）
 │   └── src/commonMain/kotlin/com/example/competition/
-│       ├── model/                # GameState、Question、难度与分类定义
-│       └── data/                 # QuestionRepository
+│       ├── model/                # GameState、Question、用户/排行模型
+│       ├── data/                 # LevelConfig、QuestionRepository
+│       ├── mvi/                  # 可复用 MVI 架构基座（MviContract / MviViewModel）
+│       └── util/                 # LevelMapCodec 等纯工具类
 ├── app/
 │   ├── shared/                   # Compose Multiplatform 共享 UI 与业务逻辑
 │   │   └── src/commonMain/kotlin/com/example/competition/
-│   │       ├── App.kt            # 应用入口与页面路由
-│   │       ├── ui/screens/       # 各功能页面（登录、首页、答题、结果等）
-│   │       ├── viewmodel/        # GameViewModel
-│   │       ├── repository/       # 本地/远程数据仓库、在线/离线路由
-│   │       ├── data/             # 关卡配置、题库加载、偏好设置
-│   │       ├── api/              # Ktor API 客户端
+│   │       ├── App.kt            # 应用入口：AppViewModel 协调路由与启动流程
+│   │       ├── presentation/     # 分层后的 MVI 层，每个功能一个子包
+│   │       │   ├── app/          #   启动 / 会话 / 导航（AppUiState/Intent/Effect/ViewModel）
+│   │       │   ├── game/         #   答题主流程（GameUiState/Intent/Effect/ViewModel）
+│   │       │   ├── login/        #   登录注册
+│   │       │   ├── profile/      #   个人中心
+│   │       │   ├── leaderboard/  #   排行榜
+│   │       │   ├── challenge/    #   单关挑战
+│   │       │   ├── challengehero/#   挑战英雄榜
+│   │       │   └── mode/         #   在线/离线模式选择
+│   │       ├── ui/
+│   │       │   ├── screens/      # 各功能页面（仅负责渲染与分发 Intent）
+│   │       │   ├── components/   # 可复用组件（ScreenBackground/ScreenHeader/StatItem…）
+│   │       │   ├── theme/        # 颜色、主题、字符串
+│   │       │   └── MviUi.kt      # rememberViewModel / MviEffectCollector 等 UI 接线工具
+│   │       ├── repository/       # 数据层：接口 + 本地/远程实现 + 模式路由
+│   │       │   ├── bridge/       #   RepositoryBridge 统一出口
+│   │       │   ├── local/        #   SQLDelight 本地实现
+│   │       │   └── remote/       #   Ktor 远程实现
+│   │       ├── data/             # UserManager、关卡配置、题库加载、偏好设置
+│   │       ├── api/              # Ktor API 客户端与 DTO
 │   │       ├── sync/             # 数据同步
 │   │       └── db/               # SQLDelight 数据库管理
 │   ├── androidApp/               # Android 入口
@@ -55,6 +72,74 @@
         ├── config/               # 数据库配置
         └── middleware/           # 认证中间件
 ```
+
+## 架构设计
+
+项目采用 **MVI（Model-View-Intent）单向数据流**，并在 `core` 中沉淀了可复用的架构基座，所有功能页共享同一套模式。
+
+### MVI 数据流
+
+```
+UI  --dispatch(Intent)-->  ViewModel --reduce/setState-->  StateFlow<S> --collectAsState-->  UI
+                              |
+                              +---emit(Effect)-->  MviEffectCollector --> 一次性副作用（导航/提示）
+```
+
+- `MviState`：不可变的 UI 快照，UI 只根据 State 渲染
+- `MviIntent`：用户意图（sealed interface），UI 通过 `dispatch` 提交
+- `MviEffect`：一次性副作用（页面跳转、弹窗等），由 `MviEffectCollector` 消费
+- `MviViewModel`：基类封装 StateFlow / SharedFlow / `setState` / `emit` / `launch`，子类在 `onIntent` 中编排异步逻辑
+
+### 分层与解耦
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ presentation/  （MVI：UiState / Intent / Effect / VM）    │
+├──────────────────────────────────────────────────────────┤
+│ ui/screens/    （纯渲染，只调用 ViewModel，不碰数据层）     │
+├──────────────────────────────────────────────────────────┤
+│ repository/    （数据访问接口 + 本地/远程实现，ModeRouter  │
+│                 按在线/离线模式切换，RepositoryBridge 统一 │
+│                 出口，业务层不感知具体实现）               │
+├──────────────────────────────────────────────────────────┤
+│ data/  api/  sync/  db/   （底层存储、网络、同步）         │
+└──────────────────────────────────────────────────────────┘
+```
+
+- 所有 `GameState`、`Question`、用户模型等纯数据类下沉到 `core`，业务层只依赖接口，便于多端复用与测试
+- `ModeRouter` 根据在线/离线模式自动路由到本地或远程实现；`RepositoryBridge` 提供统一入口，上层无感知
+- `LevelMapCodec` 等纯逻辑工具放入 `core/util`，替换原先分散在 `UserManager` 等处的重复序列化代码
+
+### 页面接线
+
+```kotlin
+val viewModel = rememberViewModel { ProfileViewModel() }   // 与组合生命周期绑定
+val state by viewModel.state.collectAsState()              // 渲染状态
+
+MviEffectCollector(viewModel) { effect ->                  // 一次性副作用
+    when (effect) {
+        ProfileEffect.Back -> onBack()
+        ...
+    }
+}
+
+// 用户操作
+viewModel.dispatch(ProfileIntent.ToggleOnline(true))
+```
+
+## 可复用组件与工具
+
+| 名称 | 位置 | 说明 |
+| --- | --- | --- |
+| `MviViewModel` | `core/.../mvi` | MVI 基类：State/Effect 管道、`setState`、`emit`、`launch` |
+| `MviContract` | `core/.../mvi` | `MviState` / `MviIntent` / `MviEffect` 标记接口 |
+| `LevelMapCodec` | `core/.../util` | 关卡进度 `Map<Int,Int>` ↔ `"1:200,2:450"` 编解码 |
+| `rememberViewModel` | `app/.../ui/MviUi.kt` | 在组合中持有 ViewModel |
+| `MviEffectCollector` | `app/.../ui/MviUi.kt` | 收集一次性副作用 |
+| `ScreenBackground` | `app/.../ui/components` | 全屏渐变背景（支持自定义渐变色与对齐） |
+| `ScreenHeader` | `app/.../ui/components` | 统一的"返回 / 标题"头部 |
+| `StatItem` | `app/.../ui/components` | 数值 / 标签统计项 |
+| `rememberPulseScale` | `app/.../ui/components` | 呼吸缩放动画 |
 
 ## 运行项目
 

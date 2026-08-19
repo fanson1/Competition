@@ -1,13 +1,14 @@
 package com.example.competition.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,12 +19,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.competition.data.UserManager
-import com.example.competition.model.ChallengeRecord
-import com.example.competition.model.ChallengeStats
-import com.example.competition.model.User
-import com.example.competition.ui.theme.*
 import com.example.competition.PlatformUtils
+import com.example.competition.model.ChallengeRecord
+import com.example.competition.model.User
+import com.example.competition.presentation.challengehero.ChallengeHeroEffect
+import com.example.competition.presentation.challengehero.ChallengeHeroIntent
+import com.example.competition.presentation.challengehero.ChallengeHeroViewModel
+import com.example.competition.ui.MviEffectCollector
+import com.example.competition.ui.components.AnimatedCount
+import com.example.competition.ui.components.EmptyState
+import com.example.competition.ui.components.GlassCard
+import com.example.competition.ui.components.QuizChip
+import com.example.competition.ui.components.ScreenBackground
+import com.example.competition.ui.components.ScreenHeader
+import com.example.competition.ui.components.StatItem
+import com.example.competition.ui.rememberViewModel
+import com.example.competition.ui.theme.*
 import org.jetbrains.compose.resources.stringResource
 import competition.app.shared.generated.resources.Res
 import competition.app.shared.generated.resources.*
@@ -33,126 +44,104 @@ fun ChallengeHeroScreen(
     user: User,
     onBack: () -> Unit
 ) {
-    val stats = remember { UserManager.getChallengeStats(user.id) }
-    var selectedTab by remember { mutableStateOf(0) }
+    val viewModel = rememberViewModel { ChallengeHeroViewModel(user.id) }
+    val state by viewModel.state.collectAsState()
 
-    val challenges = remember(selectedTab) {
-        if (selectedTab == 0) {
-            UserManager.getChallengesAsChallenger(user.id)
-        } else {
-            UserManager.getChallengesAsTarget(user.id)
+    MviEffectCollector(viewModel) { effect ->
+        when (effect) {
+            ChallengeHeroEffect.Back -> onBack()
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0D1B3E), Color(0xFF1A2980))
-                )
-            )
-    ) {
+    val stats = state.stats
+    val challenges = state.challenges
+
+    ScreenBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(16.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(Res.string.challenge_hero_back),
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.clickable { onBack() }
-                )
-                Text(
-                    text = stringResource(Res.string.challenge_hero_title),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "",
-                    modifier = Modifier.width(60.dp)
-                )
-            }
+            ScreenHeader(
+                backLabel = stringResource(Res.string.challenge_hero_back),
+                title = stringResource(Res.string.challenge_hero_title),
+                onBack = { viewModel.dispatch(ChallengeHeroIntent.Back) }
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Stats card
-            Surface(
+            GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White.copy(alpha = 0.08f)
+                shape = QuizRadii.lg,
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 22.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .size(82.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(QuizPalette.Gold.copy(alpha = 0.35f), QuizPalette.GoldDeep.copy(alpha = 0.2f))
+                            )
+                        )
+                        .border(2.dp, QuizPalette.Gold.copy(alpha = 0.7f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Gold.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
+                    Text(text = user.avatarEmoji, fontSize = 40.sp)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = user.nickname,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                if (state.selectedTab == 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text(text = user.avatarEmoji, fontSize = 40.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_total), "${stats.totalChallenges}", QuizPalette.Info, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_wins), "${stats.wins}", QuizPalette.Success, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_losses), "${stats.losses}", QuizPalette.Danger, valueFontSize = 24.sp, labelFontSize = 12.sp)
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    Text(
-                        text = user.nickname,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatItem(stringResource(Res.string.challenge_hero_win_rate), "${(stats.winRate * 100).toInt()}%", QuizPalette.Gold, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_score), "${stats.totalChallengeScore}", QuizPalette.Warning, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatItem(stringResource(Res.string.challenge_hero_total), "${stats.challengedTotal}", QuizPalette.Info, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_wins), "${stats.challengedWins}", QuizPalette.Success, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_losses), "${stats.challengedLosses}", QuizPalette.Danger, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    if (selectedTab == 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HeroStatItem(stringResource(Res.string.challenge_hero_total), "${stats.totalChallenges}", LightBlue)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_wins), "${stats.wins}", CorrectGreen)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_losses), "${stats.losses}", WrongRed)
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HeroStatItem(stringResource(Res.string.challenge_hero_win_rate), "${(stats.winRate * 100).toInt()}%", Gold)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_score), "${stats.totalChallengeScore}", TimerOrange)
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HeroStatItem(stringResource(Res.string.challenge_hero_total), "${stats.challengedTotal}", LightBlue)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_wins), "${stats.challengedWins}", CorrectGreen)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_losses), "${stats.challengedLosses}", WrongRed)
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HeroStatItem(stringResource(Res.string.challenge_hero_win_rate), "${(stats.challengedWinRate * 100).toInt()}%", Gold)
-                            HeroStatItem(stringResource(Res.string.challenge_hero_score), "${stats.totalChallengeScore}", TimerOrange.copy(alpha = 0.3f))
-                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatItem(stringResource(Res.string.challenge_hero_win_rate), "${(stats.challengedWinRate * 100).toInt()}%", QuizPalette.Gold, valueFontSize = 24.sp, labelFontSize = 12.sp)
+                        StatItem(stringResource(Res.string.challenge_hero_score), "${stats.totalChallengeScore}", QuizPalette.Warning.copy(alpha = 0.3f), valueFontSize = 24.sp, labelFontSize = 12.sp)
                     }
                 }
             }
@@ -161,32 +150,33 @@ fun ChallengeHeroScreen(
 
             // Tabs
             ScrollableTabRow(
-                selectedTabIndex = selectedTab,
+                selectedTabIndex = state.selectedTab,
                 containerColor = Color.Transparent,
-                contentColor = Gold,
-                edgePadding = 0.dp
+                contentColor = QuizPalette.Gold,
+                edgePadding = 0.dp,
+                indicator = {}
             ) {
                 Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    selected = state.selectedTab == 0,
+                    onClick = { viewModel.dispatch(ChallengeHeroIntent.SelectTab(0)) },
                     text = {
                         Text(
                             text = stringResource(Res.string.challenge_hero_tab_challenger),
                             fontSize = 14.sp,
-                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 0) Gold else Color.White.copy(alpha = 0.6f)
+                            fontWeight = if (state.selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                            color = if (state.selectedTab == 0) QuizPalette.Gold else QuizPalette.TextSecondary
                         )
                     }
                 )
                 Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    selected = state.selectedTab == 1,
+                    onClick = { viewModel.dispatch(ChallengeHeroIntent.SelectTab(1)) },
                     text = {
                         Text(
                             text = stringResource(Res.string.challenge_hero_tab_target),
                             fontSize = 14.sp,
-                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 1) Gold else Color.White.copy(alpha = 0.6f)
+                            fontWeight = if (state.selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                            color = if (state.selectedTab == 1) QuizPalette.Gold else QuizPalette.TextSecondary
                         )
                     }
                 )
@@ -196,25 +186,25 @@ fun ChallengeHeroScreen(
 
             if (challenges.isEmpty()) {
                 Box(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (selectedTab == 0) {
+                    EmptyState(
+                        emoji = "🎖️",
+                        title = if (state.selectedTab == 0) {
                             stringResource(Res.string.challenge_hero_empty)
                         } else {
                             stringResource(Res.string.challenge_hero_empty_target)
                         },
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.5f)
+                        subtitle = ""
                     )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    itemsIndexed(challenges) { index, record ->
+                    itemsIndexed(challenges) { _, record ->
                         ChallengeRecordItem(record, user.id)
                     }
                 }
@@ -224,47 +214,38 @@ fun ChallengeHeroScreen(
 }
 
 @Composable
-private fun HeroStatItem(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.6f)
-        )
-    }
-}
-
-@Composable
 private fun ChallengeRecordItem(record: ChallengeRecord, currentUserId: String) {
     val isChallenger = record.challengerId == currentUserId
-    val bgColor = if (record.isWin) CorrectGreen.copy(alpha = 0.1f) else WrongRed.copy(alpha = 0.1f)
+    val isWin = record.isWin
+    val accent = if (isWin) QuizPalette.Success else QuizPalette.Danger
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = bgColor
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(QuizRadii.md)
+            .background(if (isWin) QuizPalette.Success.copy(alpha = 0.08f) else QuizPalette.Danger.copy(alpha = 0.08f))
+            .border(1.dp, accent.copy(alpha = 0.45f), QuizRadii.md)
+            .padding(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             // Result icon
-            Text(
-                text = if (record.isWin) "✓" else "✗",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (record.isWin) CorrectGreen else WrongRed,
-                modifier = Modifier.width(32.dp),
-                textAlign = TextAlign.Center
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f))
+                    .border(1.dp, accent.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isWin) "✓" else "✗",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = accent
+                )
+            }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
@@ -275,13 +256,15 @@ private fun ChallengeRecordItem(record: ChallengeRecord, currentUserId: String) 
                         stringResource(Res.string.challenge_hero_challenged_by, record.challengerName)
                     },
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1
                 )
-                Text(
+                Spacer(modifier = Modifier.height(4.dp))
+                QuizChip(
                     text = stringResource(Res.string.challenge_hero_level, record.level),
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = accent,
+                    emoji = "⚡"
                 )
             }
 
@@ -291,12 +274,13 @@ private fun ChallengeRecordItem(record: ChallengeRecord, currentUserId: String) 
                     text = "${record.challengerScore} vs ${record.targetScore}",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (record.isWin) CorrectGreen else WrongRed
+                    color = accent
                 )
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = formatTimestamp(record.timestamp),
                     fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.4f)
+                    color = QuizPalette.TextMuted
                 )
             }
         }

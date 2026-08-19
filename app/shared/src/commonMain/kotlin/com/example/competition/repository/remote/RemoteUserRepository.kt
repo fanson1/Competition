@@ -5,6 +5,7 @@ import com.example.competition.data.UserManager
 import com.example.competition.model.User
 import com.example.competition.model.UserProfile
 import com.example.competition.repository.UserRepository
+import com.example.competition.util.LevelMapCodec
 
 class RemoteUserRepository : UserRepository {
     private var currentUser: User? = null
@@ -108,8 +109,8 @@ class RemoteUserRepository : UserRepository {
                 totalCorrectCount = totalCorrectCount,
                 totalGamesPlayed = currentProfile?.totalGamesPlayed ?: 1,
                 maxStreak = currentProfile?.maxStreak ?: streak,
-                levelScores = levelScores.entries.joinToString(",") { "${it.key}:${it.value}" },
-                levelCorrectCounts = levelCorrectCounts.entries.joinToString(",") { "${it.key}:${it.value}" },
+                levelScores = LevelMapCodec.encode(levelScores),
+                levelCorrectCounts = LevelMapCodec.encode(levelCorrectCounts),
                 completedLevels = completedLevels.toList()
             )
         )

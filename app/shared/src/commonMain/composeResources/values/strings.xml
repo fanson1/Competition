@@ -6,13 +6,18 @@
     <!-- Home -->
     <string name="home_title">一站到底</string>
     <string name="home_logo_description">一站到底 Logo</string>
-    <string name="home_start_button">▶ 开始挑战</string>
+    <string name="home_start_button">开始挑战</string>
     <string name="home_select_level">选择关卡</string>
     <string name="home_leaderboard">排行榜</string>
     <string name="home_challenge">单关挑战</string>
     <string name="home_hero">英雄榜</string>
     <string name="home_level_display">第%1$d关</string>
     <string name="home_score_display">⭐ %1$d</string>
+    <string name="home_tagline">知识竞答 · 荣耀加冕</string>
+    <string name="home_progress_label">通关进度</string>
+    <string name="home_progress_value">%1$d / %2$d</string>
+    <string name="home_level_best">最佳 %1$d 分</string>
+    <string name="home_locked">未解锁</string>
 
     <!-- Level config titles -->
     <string name="level_1_title">初出茅庐</string>
@@ -61,9 +66,11 @@
     <string name="game_streak_label">连击</string>
     <string name="game_question_progress">%1$d/%2$d</string>
     <string name="game_level_header">第%1$d关 · %2$s</string>
+    <string name="game_level_string">第%1$d关 · %2$s</string>
     <string name="game_correct_answer">✓ 回答正确！</string>
     <string name="game_wrong_answer">✗ 回答错误</string>
     <string name="game_timeout">⏰ 时间到！</string>
+    <string name="game_streak_bonus">🔥 连击 x%1$d 回答正确！</string>
     <string name="game_option_a">A</string>
     <string name="game_option_b">B</string>
     <string name="game_option_c">C</string>
@@ -72,6 +79,7 @@
     <!-- Result -->
     <string name="result_challenge_win">挑战成功！</string>
     <string name="result_challenge_lose">挑战失败</string>
+    <string name="result_try_again">再接再厉</string>
     <string name="result_level_info">第%1$d关 · %2$s</string>
     <string name="result_challenge_target">挑战对象: %1$s</string>
     <string name="result_total_score">总分</string>
@@ -170,6 +178,8 @@
     <string name="mode_sync_success">同步完成</string>
     <string name="mode_sync_failed">同步失败: %1$s</string>
     <string name="mode_need_login">请先登录后再切换到在线模式</string>
+    <string name="mode_switched_online">已切换到在线模式</string>
+    <string name="mode_switched_offline">已切换到离线模式</string>
     <string name="mode_server_url">服务器地址</string>
     <string name="mode_server_hint">例如: http://localhost:8080</string>
 

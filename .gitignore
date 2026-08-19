@@ -115,3 +115,5 @@ Desktop.ini
 *.jks
 *.key
 *.pem
+
+/.kotlin

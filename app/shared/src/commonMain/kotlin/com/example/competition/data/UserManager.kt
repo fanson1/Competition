@@ -7,6 +7,7 @@ import com.example.competition.model.ChallengeStats
 import com.example.competition.model.LeaderboardEntry
 import com.example.competition.model.User
 import com.example.competition.model.UserProfile
+import com.example.competition.util.LevelMapCodec
 
 object UserManager {
     private var currentUser: User? = null
@@ -333,7 +334,7 @@ object UserManager {
             val user = users.values.firstOrNull { it.id == entity.userId } ?: return@forEach
             val completedLevels = db.competitionQueriesQueries.getProfileCompletedLevels(entity.userId)
                 .executeAsList().map { it.toInt() }.toSet()
-            val levelScores = deserializeLevelScores(entity.levelScores)
+            val levelScores = LevelMapCodec.decode(entity.levelScores)
 
             profiles[entity.userId] = UserProfile(
                 user = user,
@@ -344,7 +345,7 @@ object UserManager {
                 totalGamesPlayed = entity.totalGamesPlayed.toInt(),
                 maxStreak = entity.maxStreak.toInt(),
                 levelScores = levelScores,
-                levelCorrectCounts = deserializeLevelScores(entity.levelCorrectCounts)
+                levelCorrectCounts = LevelMapCodec.decode(entity.levelCorrectCounts)
             )
         }
     }
@@ -411,8 +412,8 @@ object UserManager {
                 totalCorrectCount = profile.totalCorrectCount.toLong(),
                 totalGamesPlayed = profile.totalGamesPlayed.toLong(),
                 maxStreak = profile.maxStreak.toLong(),
-                levelScores = serializeLevelScores(profile.levelScores),
-                levelCorrectCounts = serializeLevelScores(profile.levelCorrectCounts)
+                levelScores = LevelMapCodec.encode(profile.levelScores),
+                levelCorrectCounts = LevelMapCodec.encode(profile.levelCorrectCounts)
             )
             // Save completed levels
             db.competitionQueriesQueries.deleteProfileCompletedLevels(userId)
@@ -508,26 +509,5 @@ object UserManager {
             sb.append(code.toString(16).padStart(2, '0'))
         }
         return sb.toString()
-    }
-
-    private fun serializeLevelScores(scores: Map<Int, Int>): String {
-        if (scores.isEmpty()) return ""
-        return scores.entries.joinToString(",") { "${it.key}:${it.value}" }
-    }
-
-    private fun deserializeLevelScores(data: String): Map<Int, Int> {
-        if (data.isBlank()) return emptyMap()
-        val map = mutableMapOf<Int, Int>()
-        data.split(",").forEach { pair ->
-            val parts = pair.trim().split(":")
-            if (parts.size == 2) {
-                val key = parts[0].toIntOrNull()
-                val value = parts[1].toIntOrNull()
-                if (key != null && value != null) {
-                    map[key] = value
-                }
-            }
-        }
-        return map
     }
 }
