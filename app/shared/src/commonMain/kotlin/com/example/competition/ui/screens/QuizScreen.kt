@@ -52,6 +52,14 @@ import competition.app.shared.generated.resources.*
 
 internal enum class OptionState { Active, Correct, Wrong, Disabled }
 
+/** Typed visual spec for the post-answer feedback banner. */
+internal data class AnswerFeedback(
+    val background: Color,
+    val foreground: Color,
+    val icon: String = "",
+    val text: String = ""
+)
+
 @Composable
 fun QuizScreen(
     gameState: GameState,
@@ -253,36 +261,37 @@ fun QuizScreen(
                 enter = scaleIn(initialScale = 0.8f) + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
-val (bg, fg, icon, extra) = when (gameState.status) {
-                    GameStatus.CORRECT_ANSWER -> listOf(
-                        QuizPalette.Success.copy(alpha = 0.16f),
-                        QuizPalette.Success,
-                        "🎉",
-                        if (gameState.streak > 1)
+                val feedback = when (gameState.status) {
+                    GameStatus.CORRECT_ANSWER -> AnswerFeedback(
+                        background = QuizPalette.Success.copy(alpha = 0.16f),
+                        foreground = QuizPalette.Success,
+                        icon = "🎉",
+                        text = if (gameState.streak > 1)
                             stringResource(Res.string.game_streak_bonus, gameState.streak)
-                        else stringResource(Res.string.game_correct_answer)
+                        else
+                            stringResource(Res.string.game_correct_answer)
                     )
-                    GameStatus.WRONG_ANSWER -> listOf(
-                        Danger.copy(alpha = 0.16f),
-                        Danger,
-                        "💥",
-                        stringResource(Res.string.game_wrong_answer)
+                    GameStatus.WRONG_ANSWER -> AnswerFeedback(
+                        background = QuizPalette.Danger.copy(alpha = 0.16f),
+                        foreground = QuizPalette.Danger,
+                        icon = "💥",
+                        text = stringResource(Res.string.game_wrong_answer)
                     )
-                    GameStatus.TIMEOUT -> listOf(
-                        Warning.copy(alpha = 0.16f),
-                        Warning,
-                        "⏰",
-                        stringResource(Res.string.game_timeout)
+                    GameStatus.TIMEOUT -> AnswerFeedback(
+                        background = QuizPalette.Warning.copy(alpha = 0.16f),
+                        foreground = QuizPalette.Warning,
+                        icon = "⏰",
+                        text = stringResource(Res.string.game_timeout)
                     )
-                    else -> listOf(Color.White.copy(alpha = 0.16f), Color.White, "", "")
+                    else -> AnswerFeedback(
+                        background = Color.White.copy(alpha = 0.16f),
+                        foreground = Color.White,
+                        icon = ""
+                    )
                 }
-                val feedbackBg = bg as Color
-                val feedbackFg = fg as Color
-                val feedbackIcon = icon as String
-                val feedbackText = extra as String
                 Surface(
                     shape = QuizRadii.md,
-                    color = feedbackBg,
+                    color = feedback.background,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -290,36 +299,15 @@ val (bg, fg, icon, extra) = when (gameState.status) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        if (feedbackIcon.isNotEmpty()) {
-                            Text(text = feedbackIcon, fontSize = 22.sp)
+                        if (feedback.icon.isNotEmpty()) {
+                            Text(text = feedback.icon, fontSize = 22.sp)
                             Spacer(modifier = Modifier.width(10.dp))
                         }
                         Text(
-                            text = feedbackText,
+                            text = feedback.text,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = feedbackFg,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-                Surface(
-                    shape = QuizRadii.md,
-                    color = bg,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(text = icon, fontSize = 22.sp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = extra,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = fg,
+                            color = feedback.foreground,
                             textAlign = TextAlign.Center
                         )
                     }

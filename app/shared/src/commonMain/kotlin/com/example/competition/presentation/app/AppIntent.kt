@@ -18,6 +18,12 @@ sealed interface AppIntent : MviIntent {
     /** Logs the current user out and returns to the login screen. */
     data object Logout : AppIntent
 
-    /** Navigates to [screen]. */
+    /** Navigates forward to [screen], pushing the current screen onto the back stack. */
     data class Navigate(val screen: Screen) : AppIntent
+
+    /** Pops the back stack, returning to the previously visited screen. */
+    data object Back : AppIntent
+
+    /** Navigates to the home screen, clearing navigation history. */
+    data object GoHome : AppIntent
 }

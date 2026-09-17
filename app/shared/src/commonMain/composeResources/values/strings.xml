@@ -93,6 +93,7 @@
     <string name="result_my_score">我的得分</string>
     <string name="result_vs">VS</string>
     <string name="result_target_score">%1$s的得分</string>
+    <string name="result_player_title">称号 · %1$s</string>
 
     <!-- Level complete -->
     <string name="level_complete_title">第%1$d关通过！</string>

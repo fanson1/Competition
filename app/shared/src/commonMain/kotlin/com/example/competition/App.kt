@@ -27,6 +27,7 @@ import com.example.competition.presentation.app.Screen
 import com.example.competition.presentation.game.GameEffect
 import com.example.competition.presentation.game.GameIntent
 import com.example.competition.presentation.game.GameViewModel
+import com.example.competition.ui.AppBackHandler
 import com.example.competition.ui.MviEffectCollector
 import com.example.competition.ui.components.QuizProgressBar
 import com.example.competition.ui.components.ScreenBackground
@@ -72,6 +73,9 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
+            AppBackHandler(enabled = appState.canGoBack) {
+                appViewModel.dispatch(AppIntent.Back)
+            }
             if (gameState.isLoading) {
                 AppLoadingScreen()
             } else {
@@ -127,7 +131,7 @@ fun App() {
                                             appViewModel.dispatch(AppIntent.Logout)
                                         },
                                         onBack = {
-                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                            appViewModel.dispatch(AppIntent.Back)
                                         }
                                     )
                                 }
@@ -136,7 +140,7 @@ fun App() {
                             Screen.LEADERBOARD -> {
                                 LeaderboardScreen(
                                     onBack = {
-                                        appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                        appViewModel.dispatch(AppIntent.Back)
                                     }
                                 )
                             }
@@ -146,11 +150,11 @@ fun App() {
                                     ChallengeScreen(
                                         user = user,
                                         onBack = {
-                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                            appViewModel.dispatch(AppIntent.Back)
                                         },
                                         onStartChallenge = { level, target ->
                                             gameViewModel.dispatch(GameIntent.StartChallenge(level, target))
-                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                            appViewModel.dispatch(AppIntent.GoHome)
                                         }
                                     )
                                 }
@@ -161,7 +165,7 @@ fun App() {
                                     ChallengeHeroScreen(
                                         user = user,
                                         onBack = {
-                                            appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                            appViewModel.dispatch(AppIntent.Back)
                                         }
                                     )
                                 }
@@ -183,19 +187,19 @@ fun App() {
                         )
                     }
 
-                    GameStatus.LEVEL_COMPLETE -> {
-                        LevelCompleteScreen(
-                            gameState = game,
-                            onNextLevel = { gameViewModel.dispatch(GameIntent.StartNextLevel) },
-                            onRetryLevel = { gameViewModel.dispatch(GameIntent.RetryCurrentLevel) },
-                            onBackToHome = {
-                                gameViewModel.dispatch(GameIntent.ClearChallengeTarget)
-                                gameViewModel.dispatch(GameIntent.ResetGame)
-                                appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
-                            },
-                            challengeTarget = gameState.challengeTarget
-                        )
-                    }
+GameStatus.LEVEL_COMPLETE -> {
+                                LevelCompleteScreen(
+                                    gameState = game,
+                                    onNextLevel = { gameViewModel.dispatch(GameIntent.StartNextLevel) },
+                                    onRetryLevel = { gameViewModel.dispatch(GameIntent.RetryCurrentLevel) },
+                                    onBackToHome = {
+                                        gameViewModel.dispatch(GameIntent.ClearChallengeTarget)
+                                        gameViewModel.dispatch(GameIntent.ResetGame)
+                                        appViewModel.dispatch(AppIntent.GoHome)
+                                    },
+                                    challengeTarget = gameState.challengeTarget
+                                )
+                            }
 
                     GameStatus.GAME_OVER -> {
                         ResultScreen(
@@ -204,7 +208,7 @@ fun App() {
                             onBackToHome = {
                                 gameViewModel.dispatch(GameIntent.ClearChallengeTarget)
                                 gameViewModel.dispatch(GameIntent.ResetGame)
-                                appViewModel.dispatch(AppIntent.Navigate(Screen.HOME))
+                                appViewModel.dispatch(AppIntent.GoHome)
                             },
                             challengeTarget = gameState.challengeTarget
                         )

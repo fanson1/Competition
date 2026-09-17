@@ -63,12 +63,12 @@ fun categoryRes(category: Category): StringResource = when (category) {
 }
 
 @Composable
-fun resolvePlayerTitle(key: String): String = when (key) {
-    "player_title_rampant" -> stringResource(Res.string.player_title_rampant)
-    "player_title_excellent" -> stringResource(Res.string.player_title_excellent)
-    "player_title_notable" -> stringResource(Res.string.player_title_notable)
-    "player_title_showing_potential" -> stringResource(Res.string.player_title_showing_potential)
-    "player_title_courageous" -> stringResource(Res.string.player_title_courageous)
-    "player_title_grandmaster" -> stringResource(Res.string.player_title_grandmaster)
-    else -> key
+fun resolvePlayerTitle(title: com.example.competition.model.PlayerTitle?): String = when (title) {
+    com.example.competition.model.PlayerTitle.RAMPANT -> stringResource(Res.string.player_title_rampant)
+    com.example.competition.model.PlayerTitle.EXCELLENT -> stringResource(Res.string.player_title_excellent)
+    com.example.competition.model.PlayerTitle.NOTABLE -> stringResource(Res.string.player_title_notable)
+    com.example.competition.model.PlayerTitle.SHOWING_POTENTIAL -> stringResource(Res.string.player_title_showing_potential)
+    com.example.competition.model.PlayerTitle.COURAGEOUS -> stringResource(Res.string.player_title_courageous)
+    com.example.competition.model.PlayerTitle.GRANDMASTER -> stringResource(Res.string.player_title_grandmaster)
+    null -> ""
 }

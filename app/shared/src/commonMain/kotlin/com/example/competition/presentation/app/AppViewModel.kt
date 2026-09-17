@@ -18,11 +18,33 @@ class AppViewModel : MviViewModel<AppUiState, AppIntent, AppEffect>(AppUiState()
     override fun onIntent(intent: AppIntent) {
         when (intent) {
             AppIntent.Init -> init()
-            AppIntent.ModeSelectionComplete -> setState { it.copy(currentScreen = Screen.LOGIN) }
+            AppIntent.ModeSelectionComplete -> navigateTo(Screen.LOGIN, clearStack = true)
             AppIntent.LoginSuccess -> onLoginSuccess()
             AppIntent.RefreshUser -> setState { it.copy(user = UserManager.getCurrentUser()) }
             AppIntent.Logout -> logout()
-            is AppIntent.Navigate -> setState { it.copy(currentScreen = intent.screen) }
+            is AppIntent.Navigate -> navigateTo(intent.screen)
+            AppIntent.Back -> goBack()
+            AppIntent.GoHome -> navigateTo(Screen.HOME, clearStack = true)
+        }
+    }
+
+    private fun navigateTo(screen: Screen, clearStack: Boolean = false) {
+        setState {
+            if (screen == it.currentScreen) return@setState it
+            it.copy(
+                backStack = if (clearStack) emptyList() else it.backStack + it.currentScreen,
+                currentScreen = screen
+            )
+        }
+    }
+
+    private fun goBack() {
+        setState {
+            if (it.backStack.isEmpty()) it
+            else it.copy(
+                currentScreen = it.backStack.last(),
+                backStack = it.backStack.dropLast(1)
+            )
         }
     }
 
@@ -58,13 +80,15 @@ class AppViewModel : MviViewModel<AppUiState, AppIntent, AppEffect>(AppUiState()
                                     // 服务端可达 + token 有效 → 载入远程数据，进 HOME
                                     val remoteUser = RepositoryBridge.getRemoteUser()
                                     remoteUser.loadFromRemote(vr.user)
-                                    setState { it.copy(user = UserManager.getCurrentUser(), isLoggedIn = true) }
-                                    GamePreferences.setUserId(state.value.user?.id)
+                                    val restoredUser = UserManager.getCurrentUser()
+                                    setState { it.copy(user = restoredUser, isLoggedIn = true) }
+                                    GamePreferences.setUserId(restoredUser?.id)
                                     ApiClient.getMe().onSuccess { me ->
                                         val profile = me.profile
-                                        if (profile != null) {
+                                        val sessionUser = UserManager.getCurrentUser()
+                                        if (profile != null && sessionUser != null) {
                                             val userProfile = UserProfile(
-                                                user = UserManager.getCurrentUser()!!,
+                                                user = sessionUser,
                                                 totalScore = profile.totalScore,
                                                 maxLevel = profile.maxLevel,
                                                 totalCorrectCount = profile.totalCorrectCount,
@@ -96,7 +120,7 @@ class AppViewModel : MviViewModel<AppUiState, AppIntent, AppEffect>(AppUiState()
                 }
             }
 
-            setState { it.copy(currentScreen = screen, isInitialized = true) }
+            setState { it.copy(currentScreen = screen, backStack = emptyList(), isInitialized = true) }
         }
     }
 
@@ -108,13 +132,20 @@ class AppViewModel : MviViewModel<AppUiState, AppIntent, AppEffect>(AppUiState()
         if (ModeRouter.isOnline()) {
             emit(AppEffect.SyncLeaderboard)
         }
-        setState { it.copy(currentScreen = Screen.HOME) }
+        setState { it.copy(currentScreen = Screen.HOME, backStack = emptyList()) }
     }
 
     private fun logout() {
         UserManager.logout()
         GamePreferences.setUserId(null)
         emit(AppEffect.ReloadGameProgress)
-        setState { it.copy(user = null, isLoggedIn = false, currentScreen = Screen.LOGIN) }
+        setState {
+            it.copy(
+                user = null,
+                isLoggedIn = false,
+                currentScreen = Screen.LOGIN,
+                backStack = emptyList()
+            )
+        }
     }
 }

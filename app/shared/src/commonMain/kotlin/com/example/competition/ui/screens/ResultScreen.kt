@@ -26,12 +26,15 @@ import com.example.competition.model.LeaderboardEntry
 import com.example.competition.ui.components.AnimatedCount
 import com.example.competition.ui.components.DeepGradientColors
 import com.example.competition.ui.components.GlassCard
+import com.example.competition.ui.components.QuizChip
 import com.example.competition.ui.components.QuizPrimaryButton
 import com.example.competition.ui.components.QuizSecondaryButton
 import com.example.competition.ui.components.ScreenBackground
 import com.example.competition.ui.components.rememberPulseScale
-import com.example.competition.ui.theme.*
+import com.example.competition.ui.theme.QuizPalette
+import com.example.competition.ui.theme.QuizRadii
 import com.example.competition.ui.levelTitle
+import com.example.competition.ui.resolvePlayerTitle
 import org.jetbrains.compose.resources.stringResource
 import competition.app.shared.generated.resources.Res
 import competition.app.shared.generated.resources.*
@@ -48,7 +51,7 @@ fun ResultScreen(
     val effectiveTotalScore = UserManager.getCurrentProfile()?.totalScore ?: gameState.score
 
     val pulse = rememberPulseScale()
-    val heroColor = if (isChallengeWin) Success else QuizPalette.Danger
+    val heroColor = if (isChallengeWin) QuizPalette.Success else QuizPalette.Danger
     val heroEmoji = when {
         isChallengeWin -> "🏆"
         isChallengeMode -> "💔"
@@ -116,6 +119,16 @@ fun ResultScreen(
                     fontSize = 12.sp,
                     color = QuizPalette.TextMuted
                 )
+            } else {
+                val title = resolvePlayerTitle(gameState.playerTitle)
+                if (title.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    QuizChip(
+                        text = stringResource(Res.string.result_player_title, title),
+                        color = QuizPalette.Gold,
+                        emoji = "🎖️"
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -156,12 +169,12 @@ fun ResultScreen(
                         ResultStatItem(
                             label = stringResource(Res.string.result_correct),
                             value = gameState.levelCorrectCount,
-                            color = Success
+                            color = QuizPalette.Success
                         )
                         ResultStatItem(
                             label = stringResource(Res.string.result_wrong),
                             value = gameState.levelWrongCount,
-                            color = Danger
+                            color = QuizPalette.Danger
                         )
                         ResultStatItem(
                             label = stringResource(Res.string.result_streak),
@@ -192,7 +205,7 @@ fun ResultScreen(
                         text = stringResource(Res.string.result_accuracy, accuracy),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Info
+                        color = QuizPalette.Info
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(

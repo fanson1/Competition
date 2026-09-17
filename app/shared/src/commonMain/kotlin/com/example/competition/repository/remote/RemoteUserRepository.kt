@@ -121,8 +121,12 @@ class RemoteUserRepository : UserRepository {
     }
 
     fun loadFromRemote(userDto: com.example.competition.api.dto.UserDto) {
-        currentUser = toUser(userDto)
+        val user = toUser(userDto)
+        currentUser = user
         resetState()
+        // Keep the shared local session in sync so UI/session state stays valid
+        // when restoring an authenticated session on cold start.
+        UserManager.setCurrentUser(user)
     }
 
     fun loadProfile(profile: com.example.competition.model.UserProfile) {

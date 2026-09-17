@@ -13,7 +13,7 @@ data class GameState(
     val selectedAnswerIndex: Int? = null,
     val isAnswerRevealed: Boolean = false,
     val timeRemaining: Float = 0f,
-    val playerTitle: String = "",
+    val playerTitle: PlayerTitle? = null,
     val currentLevel: Int = 1,
     val maxUnlockedLevel: Int = 1,
     val levelCorrectCount: Int = 0,
@@ -30,6 +30,35 @@ enum class GameStatus {
     TIMEOUT,
     LEVEL_COMPLETE,
     GAME_OVER
+}
+
+/**
+ * Player performance title earned within a single level run.
+ *
+ * Using an enum instead of the previous raw string keys keeps the domain
+ * model type-safe and makes the game rules discoverable in one place.
+ */
+enum class PlayerTitle(val key: String) {
+    RAMPANT("player_title_rampant"),
+    EXCELLENT("player_title_excellent"),
+    NOTABLE("player_title_notable"),
+    SHOWING_POTENTIAL("player_title_showing_potential"),
+    COURAGEOUS("player_title_courageous"),
+    GRANDMASTER("player_title_grandmaster");
+
+    companion object {
+        /** Best-effort reverse lookup for data persisted with legacy string keys. */
+        fun fromKey(key: String?): PlayerTitle? = values().firstOrNull { it.key == key }
+
+        /** Titles awarded by number of correct answers within the current level. */
+        fun fromCorrectCount(count: Int): PlayerTitle = when {
+            count >= 8 -> RAMPANT
+            count >= 6 -> EXCELLENT
+            count >= 4 -> NOTABLE
+            count >= 2 -> SHOWING_POTENTIAL
+            else -> COURAGEOUS
+        }
+    }
 }
 
 val GameStatus.isGameOver: Boolean

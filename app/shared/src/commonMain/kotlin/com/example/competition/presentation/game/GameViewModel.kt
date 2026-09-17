@@ -10,15 +10,23 @@ import com.example.competition.model.Difficulty
 import com.example.competition.model.GameState
 import com.example.competition.model.GameStatus
 import com.example.competition.model.LeaderboardEntry
+import com.example.competition.model.PlayerTitle
 import com.example.competition.mvi.MviViewModel
 import com.example.competition.repository.bridge.RepositoryBridge
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
+internal const val ANSWER_FEEDBACK_DELAY_MS = 1200L
+internal const val FAILURE_FEEDBACK_DELAY_MS = 2000L
+internal const val TIMER_TICK_MS = 50L
+
 class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiState()) {
 
     private var timerJob: Job? = null
     private var currentRoundQuestionIds: List<Int> = emptyList()
+
+    /** Absolute wall-clock deadline (ms) of the current question; 0 when idle. */
+    private var questionDeadline: Long = 0L
 
     override fun onIntent(intent: GameIntent) {
         when (intent) {
@@ -43,7 +51,6 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
             val savedState = GamePreferences.loadProgress()
             setState { it.copy(game = savedState, isLoading = false) }
         } catch (e: Exception) {
-            e.printStackTrace()
             setState { it.copy(isLoading = false) }
         }
     }
@@ -70,7 +77,7 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
                     selectedAnswerIndex = null,
                     isAnswerRevealed = false,
                     timeRemaining = questions.first().timeLimitSeconds.toFloat(),
-                    playerTitle = "",
+                    playerTitle = null,
                     currentLevel = level,
                     maxUnlockedLevel = previousState.maxUnlockedLevel,
                     levelCorrectCount = 0,
@@ -100,17 +107,9 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
 
         val questionWithOpts = game.questions[game.currentQuestionIndex]
         val isCorrect = answerIndex == questionWithOpts.shuffledCorrectIndex
-        val timeUsed = questionWithOpts.timeLimitSeconds - game.timeRemaining
 
         if (isCorrect) {
-            val baseScore = when (questionWithOpts.difficulty) {
-                Difficulty.EASY -> 100
-                Difficulty.MEDIUM -> 200
-                Difficulty.HARD -> 300
-            }
-            val timeBonus = ((game.timeRemaining / questionWithOpts.timeLimitSeconds) * 50).toInt()
-            val streakMultiplier = 1 + (game.streak * 0.2f)
-            val totalPoints = ((baseScore + timeBonus) * streakMultiplier).toInt()
+            val totalPoints = pointsFor(questionWithOpts.difficulty, game.timeRemaining, game.streak)
 
             val newStreak = game.streak + 1
             val newLevelCorrect = game.levelCorrectCount + 1
@@ -132,11 +131,10 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
             }
 
             launch {
-                delay(1200)
+                delay(ANSWER_FEEDBACK_DELAY_MS)
                 advanceToNextQuestion()
             }
         } else {
-            val title = getPlayerTitle(game)
             setState {
                 it.copy(
                     game = it.game.copy(
@@ -146,26 +144,33 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
                         streak = 0,
                         wrongCount = it.game.wrongCount + 1,
                         levelWrongCount = it.game.levelWrongCount + 1,
-                        playerTitle = title
+                        playerTitle = PlayerTitle.fromCorrectCount(it.game.levelCorrectCount)
                     )
                 )
             }
-
-            launch {
-                delay(2000)
-                val finalState = state.value.game.copy(status = GameStatus.GAME_OVER)
-                setState { it.copy(game = finalState) }
-                saveProgress(finalState)
-                emit(GameEffect.GameOver)
-            }
+            scheduleGameOver()
         }
     }
 
-    private fun tick(deltaTime: Float) {
+    private fun scheduleGameOver() {
+        launch {
+            delay(FAILURE_FEEDBACK_DELAY_MS)
+            val finalState = state.value.game.copy(status = GameStatus.GAME_OVER)
+            setState { it.copy(game = finalState) }
+            saveProgress(finalState)
+            emit(GameEffect.GameOver)
+        }
+    }
+
+    private fun tick() {
         val game = state.value.game
         if (game.status != GameStatus.PLAYING) return
 
-        val newTime = (game.timeRemaining - deltaTime).coerceAtLeast(0f)
+        val newTime = if (questionDeadline > 0L) {
+            ((questionDeadline - PlatformUtils.currentTimeMillis()) / 1000f).coerceIn(0f, game.timeRemaining.coerceAtLeast(0f))
+        } else {
+            0f
+        }
         setState { it.copy(game = it.game.copy(timeRemaining = newTime)) }
 
         if (newTime <= 0f) {
@@ -175,8 +180,8 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
 
     private fun handleTimeout() {
         stopTimer()
+        questionDeadline = 0L
         val game = state.value.game
-        val title = getPlayerTitle(game)
         setState {
             it.copy(
                 game = it.game.copy(
@@ -185,18 +190,11 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
                     streak = 0,
                     wrongCount = it.game.wrongCount + 1,
                     levelWrongCount = it.game.levelWrongCount + 1,
-                    playerTitle = title
+                    playerTitle = PlayerTitle.fromCorrectCount(it.game.levelCorrectCount)
                 )
             )
         }
-
-        launch {
-            delay(2000)
-            val finalState = state.value.game.copy(status = GameStatus.GAME_OVER)
-            setState { it.copy(game = finalState) }
-            saveProgress(finalState)
-            emit(GameEffect.GameOver)
-        }
+        scheduleGameOver()
     }
 
     private fun advanceToNextQuestion() {
@@ -210,7 +208,6 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
             val finalState = game.copy(
                 status = GameStatus.LEVEL_COMPLETE,
                 currentQuestionIndex = nextIndex,
-                playerTitle = "level_${game.currentLevel}_title",
                 completedLevels = newCompletedLevels,
                 maxUnlockedLevel = newMaxUnlocked
             )
@@ -218,6 +215,7 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
             saveProgress(finalState)
             emit(GameEffect.LevelComplete)
         } else {
+            val timeLimit = game.questions[nextIndex].timeLimitSeconds.toFloat()
             setState {
                 it.copy(
                     game = it.game.copy(
@@ -225,7 +223,7 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
                         currentQuestionIndex = nextIndex,
                         selectedAnswerIndex = null,
                         isAnswerRevealed = false,
-                        timeRemaining = it.game.questions[nextIndex].timeLimitSeconds.toFloat()
+                        timeRemaining = timeLimit
                     )
                 )
             }
@@ -236,12 +234,12 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
     private fun startNextLevel() {
         val game = state.value.game
         val nextLevel = game.currentLevel + 1
-        if (nextLevel <= 10) {
+        if (nextLevel <= LevelConfigs.levels.size) {
             startLevel(nextLevel)
         } else {
             val finalState = game.copy(
                 status = GameStatus.GAME_OVER,
-                playerTitle = "player_title_grandmaster"
+                playerTitle = PlayerTitle.GRANDMASTER
             )
             setState { it.copy(game = finalState) }
             saveProgress(finalState)
@@ -260,7 +258,7 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
             updateLeaderboardAndProfile(state)
             saveChallengeResult(state)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Non-critical: persistence failures should not break the game flow.
         }
     }
 
@@ -317,17 +315,18 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
                 RepositoryBridge.leaderboard().updateLeaderboard(entry)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Non-critical: leaderboard/profile stats are best-effort.
         }
     }
 
     private fun startTimer() {
         stopTimer()
+        val remaining = state.value.game.timeRemaining.coerceAtLeast(0f)
+        questionDeadline = PlatformUtils.currentTimeMillis() + (remaining * 1000f).toLong()
         timerJob = launch {
-            val frameTime = 50L
             while (true) {
-                delay(frameTime)
-                tick(frameTime / 1000f)
+                delay(TIMER_TICK_MS)
+                tick()
             }
         }
     }
@@ -335,16 +334,7 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
     private fun stopTimer() {
         timerJob?.cancel()
         timerJob = null
-    }
-
-    private fun getPlayerTitle(state: GameState): String {
-        return when {
-            state.levelCorrectCount >= 8 -> "player_title_rampant"
-            state.levelCorrectCount >= 6 -> "player_title_excellent"
-            state.levelCorrectCount >= 4 -> "player_title_notable"
-            state.levelCorrectCount >= 2 -> "player_title_showing_potential"
-            else -> "player_title_courageous"
-        }
+        questionDeadline = 0L
     }
 
     private fun resetGame() {
@@ -361,7 +351,18 @@ class GameViewModel : MviViewModel<GameUiState, GameIntent, GameEffect>(GameUiSt
         try {
             RepositoryBridge.leaderboard().getLeaderboard()
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Swallow: leaderboard sync is best-effort on login.
         }
+    }
+
+    private fun pointsFor(difficulty: Difficulty, timeRemaining: Float, streak: Int): Int {
+        val baseScore = when (difficulty) {
+            Difficulty.EASY -> 100
+            Difficulty.MEDIUM -> 200
+            Difficulty.HARD -> 300
+        }
+        val timeBonus = (timeRemaining.coerceIn(0f, 1f) * 50).toInt()
+        val streakMultiplier = 1 + streak * 0.2f
+        return ((baseScore + timeBonus) * streakMultiplier).toInt()
     }
 }

@@ -9,10 +9,16 @@ enum class Screen {
 
 /**
  * App-level navigation and session state.
+ *
+ * [backStack] holds the screens visited before [currentScreen] so the system
+ * back gesture can return through the user's actual navigation history.
  */
 data class AppUiState(
     val currentScreen: Screen = Screen.MODE_SELECT,
+    val backStack: List<Screen> = emptyList(),
     val user: User? = null,
     val isLoggedIn: Boolean = false,
     val isInitialized: Boolean = false,
-) : MviState
+) : MviState {
+    val canGoBack: Boolean get() = backStack.isNotEmpty()
+}

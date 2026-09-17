@@ -253,7 +253,7 @@ fun QuizPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     leading: (@Composable RowScope.() -> Unit)? = null,
-    content: (@Composable RowScope.() -> Unit)? = null
+    trailing: (@Composable RowScope.() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -298,6 +298,10 @@ fun QuizPrimaryButton(
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold
         )
+        if (trailing != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            trailing()
+        }
     }
 }
 

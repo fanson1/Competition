@@ -284,12 +284,11 @@ ScreenBackground(
                     onClick = { viewModel.dispatch(LoginIntent.Submit) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isLoading,
-                    content = if (state.isLoading) {
+                    trailing = if (state.isLoading) {
                         {
                             CircularProgressIndicator(
                                 modifier = Modifier
-                                    .size(20.dp)
-                                    .padding(end = 8.dp),
+                                    .size(20.dp),
                                 color = QuizPalette.NightDeep,
                                 strokeWidth = 2.dp
                             )
